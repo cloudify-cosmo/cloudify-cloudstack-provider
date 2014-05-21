@@ -1,0 +1,92 @@
+authentication:
+    api_key: '8rVa1PQ6GIchsNgzryI-NGDXO-n9NbI-9fKmvQcW-JfK6D4z8z4RlNdSQ4aD3Mpk2iBgrMzQuP7mHv88f6mTlg'
+    api_secret_key: 'y2saZqfYPencTkLoEhMa8m-ZZ58L8Gq5m4ojQZhKONljsKtJW0RZuvKKmRUO0HCsjSzM3VdyeY_2_011Usrd4A'
+
+compute:
+    management_server:
+        #floating_ip: [FLOATING_IP] #uncomment and provide preallocated ip to disable auto-allocation of new IP on each run
+        user_on_management: root
+        userhome_on_management: /root
+        instance:
+            use_existing: False
+            name: adaml1-management-server
+            image: 299fd26a-2b4f-4ff4-acfd-23d2682d65ba
+            size: Medium
+        management_keypair:
+            use_existing: False
+            name: cloudify-management-kp
+            provided:
+                public_key_filepath:
+                private_key_filepath: ~/.ssh/cloudify-management-kp.pem
+            auto_generated:
+                private_key_target_path: ~/.ssh/cloudify-management-kp.pem
+    agent_servers:
+        agents_keypair:
+            use_existing: False
+            name: cloudify-agents-kp
+            provided:
+                public_key_filepath:
+                private_key_filepath: ~/.ssh/cloudify-agents-kp.pem
+            auto_generated:
+                private_key_target_path: ~/.ssh/cloudify-agents-kp.pem
+
+
+networking:
+    agents_security_group:
+        use_existing: False
+        name: adaml2-cloudify-sg-agents
+        protocol: TCP
+        cidr: 0.0.0.0/0
+        ports: [22, 27018, 28018]
+    management_security_group:
+        use_existing: False
+        name: adaml2-cloudify-sg-management
+        protocol: TCP
+        cidr: 0.0.0.0/0
+        ports: [5555, 5672, 53229, 22, 8100, 80]
+
+cloudify:
+    cloudify_branch: develop
+    #cloudify_components_package_url: https://s3-us-west-1.amazonaws.com/gigaspaces-cosmo-packages/cloudify3-components_3.0.0_amd64.deb
+    cloudify_components_package_url: https://dl.dropboxusercontent.com/u/407576/cloudify3-components_3.0.0_amd64.deb
+    #cloudify_package_url: https://s3-us-west-1.amazonaws.com/gigaspaces-cosmo-packages/cloudify3_3.0.0_amd64.deb
+    cloudify_package_url: https://dl.dropboxusercontent.com/u/407576/cloudify3_3.0.0_amd64.deb
+    cloudify_ubuntu_agent_url: https://dl.dropboxusercontent.com/u/407576/ubuntu-agent_3.0.0_amd64.deb
+
+#this section only applies to bootstrapping in --dev-mode
+dev:
+    #each section here is identified with one virtual environment
+    celery:
+        #which virtualenv dir does this apply to?
+        virtualenv: /opt/celery/cloudify.management__worker/env/
+        #which shell commands are run before the branches are deployed?
+        preruns:
+            - echo "Hi!"
+        #which branches will be applied to this virtualenv?
+        installs:
+            - https://github.com/CloudifySource/cosmo-plugin-agent-installer/archive/develop.tar.gz
+            - https://github.com/CloudifySource/cosmo-plugin-plugin-installer/archive/develop.tar.gz
+            - https://github.com/CloudifySource/cosmo-plugin-kv-store/archive/develop.tar.gz
+            - https://github.com/CloudifySource/cosmo-celery-common/archive/develop.tar.gz
+        #which shell commands are run after the branches are deployed?
+        runs:
+            - sudo /etc/init.d/celeryd-cloudify.management restart
+            - sudo /etc/init.d/celeryd-cloudify.management status
+    rest_server:
+        virtualenv: /opt/manager
+        downloads:
+            - https://github.com/CloudifySource/cosmo-manager/archive/develop.tar.gz
+        installs:
+            - /tmp/cosmo-manager-*/manager-rest/
+        runs:
+            - sudo restart manager
+            - sudo status manager
+    workflow_service:
+        virtualenv: /opt/manager
+        downloads:
+            - https://github.com/CloudifySource/cosmo-manager/archive/develop.tar.gz
+        installs:
+            workflow_service: /tmp/cosmo-manager-*/workflow-service/*
+        runs:
+            - sudo restart workflow
+            - sudo status workflow

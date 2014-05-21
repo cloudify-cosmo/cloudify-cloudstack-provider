@@ -1,0 +1,88 @@
+authentication:
+    api_key: 'API_KEY'
+    api_secret_key: 'API_SECRET_KEY'
+
+compute:
+    management_server:
+        #floating_ip: [FLOATING_IP] #uncomment and provide preallocated ip to disable auto-allocation of new IP on each run
+        user_on_management: root
+        userhome_on_management: /root
+        instance:
+            use_existing: False
+            name: adaml3-management-server
+            image: 299fd26a-2b4f-4ff4-acfd-23d2682d65ba
+            size: Medium
+        management_keypair:
+            use_existing: False
+            name: cloudify-management-kp
+            provided:
+                public_key_filepath:
+                private_key_filepath: ~/.ssh/cloudify-management-kp.pem
+            auto_generated:
+                private_key_target_path: ~/.ssh/cloudify-management-kp.pem
+    agent_servers:
+        agents_keypair:
+            use_existing: False
+            name: cloudify-agents-kp
+            provided:
+                public_key_filepath:
+                private_key_filepath: ~/.ssh/cloudify-agents-kp.pem
+            auto_generated:
+                private_key_target_path: ~/.ssh/cloudify-agents-kp.pem
+
+
+networking:
+    agents_security_group:
+        use_existing: False
+        name: cloudify-sg-agents
+        protocol: TCP
+        cidr: 0.0.0.0/0
+        ports: [22, 27018, 28018]
+    management_security_group:
+        use_existing: False
+        name: cloudify-sg-management
+        protocol: TCP
+        cidr: 0.0.0.0/0
+        ports: [5555, 5672, 53229, 22, 8100, 80]
+
+#cloudify:
+#    cloudify_components_package_url: http://repository.cloudifysource.org/org/cloudify3/3.0.0/nightly_1/cloudify-components_3.0.0-beta-b1_amd64.deb
+#    cloudify_core_package_url: http://repository.cloudifysource.org/org/cloudify3/3.0.0/nightly_1/cloudify-core_3.0.0-beta-b1_amd64.deb
+#    cloudify_ui_package_url: http://repository.cloudifysource.org/org/cloudify3/3.0.0/nightly_1/cloudify-ui_3.0.0-beta-b1_amd64.deb
+#    cloudify_ubuntu_agent_url: http://repository.cloudifysource.org/org/cloudify3/3.0.0/nightly_1/ubuntu-agent_3.0.0-beta-b1_amd64.deb
+#
+##this section only applies to bootstrapping in --dev-mode
+#dev:
+#    #each section here is identified with one virtual environment
+#    celery:
+#        #which virtualenv dir does this apply to?
+#        virtualenv: /opt/celery/cloudify.management__worker/env/
+#        #which shell commands are run before the branches are deployed?
+#        preruns:
+#            - echo "Hi!"
+#        downloads:
+#            - https://github.com/cloudify-cosmo/cloudify-manager/archive/develop.tar.gz
+#        #which branches will be applied to this virtualenv?
+#        installs:
+#            - /cloudify-manager-develop/plugins/agent-installer/
+#            - /cloudify-manager-develop/plugins/plugin-installer/
+#            - https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/develop.tar.gz
+#        #which shell commands are run after the branches are deployed?
+#        runs:
+#            - sudo /etc/init.d/celeryd-cloudify.management restart
+#    manager:
+#        virtualenv: /opt/manager
+#        downloads:
+#            - https://github.com/cloudify-cosmo/cloudify-manager/archive/develop.tar.gz
+#        installs:
+#            - /cloudify-manager-develop/rest-service/
+#            - /cloudify-manager-develop/plugins/agent-installer/
+#            - /cloudify-manager-develop/plugins/plugin-installer/
+#        runs:
+#            - sudo cp -R /tmp/opt/manager/cloudify-manager-develop/resources/rest-service/cloudify /opt/manager/resources # for resources and workflow service
+#            - sudo cp -R /tmp/opt/manager/cloudify-manager-develop/* /opt/manager/cloudify-manager-develop/ # for resources and workflow service
+#            - sudo rm -rf /tmp/opt/manager/lib/python2.7/site-packages/rest-service
+#            - sudo restart workflow
+#            - sudo status workflow
+#            - sudo restart manager
+#            - sudo status manager
