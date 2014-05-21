@@ -23,6 +23,9 @@ from libcloud.compute.providers import get_driver
 import yaml
 import errno
 
+from fabric.api import put, env
+from fabric.context_managers import settings
+
 import libcloud.security
 # from CLI
 # provides a logger to be used throughout the provider code
@@ -92,6 +95,40 @@ class ProviderManager(BaseProviderClass):
             keypair_config['auto_generated']['private_key_target_path']
         return expanduser(path)
 
+    def copy_files_to_manager(self, mgmt_ip, config, ssh_key, ssh_user):
+        def _copy(userhome_on_management,agents_key_path):
+
+            env.user = ssh_user
+            env.key_filename = ssh_key
+            env.abort_on_prompts = False
+            env.connection_attempts = 12
+            env.keepalive = 0
+            env.linewise = False
+            env.pool_size = 0
+            env.skip_bad_hosts = False
+            env.timeout = 5
+            env.forward_agent = True
+            env.status = False
+            env.disable_known_hosts = False
+
+            lgr.info('uploading agents private key to manager')
+            # TODO: handle failed copy operations
+            put(agents_key_path, userhome_on_management + '/.ssh')
+
+        def _get_private_key_path_from_keypair_config(keypair_config):
+            path = keypair_config['provided']['private_key_filepath'] if \
+                'provided' in keypair_config else \
+                keypair_config['auto_generated']['private_key_target_path']
+            return expanduser(path)
+
+        compute_config = config['compute']
+        mgmt_server_config = compute_config['management_server']
+
+        with settings(host_string=mgmt_ip):
+            _copy(
+                mgmt_server_config['userhome_on_management'],
+                _get_private_key_path_from_keypair_config(
+                    compute_config['agent_servers']['agents_keypair']))
 
     def provision(self):
         """
@@ -141,12 +178,20 @@ class ProviderManager(BaseProviderClass):
 
         print('public ip: ' + public_ip + ' key name: ' + self._get_private_key_path_from_keypair_config(
             mgmt_server_config['management_keypair']) + 'user name: ' + mgmt_server_config.get('user_on_management'))
+
+        self.copy_files_to_manager(
+            public_ip,
+            self.provider_config,
+            self._get_private_key_path_from_keypair_config(
+                mgmt_server_config['management_keypair']),
+            mgmt_server_config.get('user_on_management'))
+
         return public_ip, \
                public_ip, \
                self._get_private_key_path_from_keypair_config(
                    mgmt_server_config['management_keypair']), \
                mgmt_server_config.get('user_on_management'), \
-               None
+               provider_context
 
     def validate(self, validation_errors={}):
         """

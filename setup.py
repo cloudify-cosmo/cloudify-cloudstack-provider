@@ -19,6 +19,12 @@ from setuptools import setup
 
 VERSION = '1.0'
 
+COSMO_CLI_VERSION = '3.0'
+COSMO_CLI_BRANCH = 'develop'
+COSMO_CLI = 'https://github.com/cloudify-cosmo/cloudify-cli/tarball/' \
+            '{0}#egg=cloudify-cli-{1}'.format(
+    COSMO_CLI_BRANCH, COSMO_CLI_VERSION)
+
 setup(
     name='cloudify-exoscale',
     version=VERSION,
@@ -28,7 +34,7 @@ setup(
     license='LICENSE',
     description='the cloudify exoscale provider',
     package_data={'cloudify_exoscale': ['cloudify-config.yaml',
-                                         'cloudify-config.defaults.yaml']},
+                                        'cloudify-config.defaults.yaml']},
     install_requires=[
         "scp",
         "fabric",
@@ -36,6 +42,7 @@ setup(
         "IPy",
         "PyYAML",
         "apache-libcloud>=0.14.1",
-
+        "cloudify-cli"
     ],
+    dependency_links=[COSMO_CLI]
 )
