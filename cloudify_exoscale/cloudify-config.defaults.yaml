@@ -36,7 +36,7 @@ networking:
         name: cloudify-agents-sg
         protocol: TCP
         cidr: 0.0.0.0/0
-        ports: [22, 27017, 28017, 8080]
+        ports: [22]
     management_security_group:
         use_existing: true
         name: cloudify-management-sg
