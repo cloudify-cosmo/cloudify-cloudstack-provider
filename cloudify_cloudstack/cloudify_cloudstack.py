@@ -268,7 +268,8 @@ class ProviderManager(BaseProviderClass):
 
         # lgr.debug('reading configuration file {0}'.format(config_path))
         # provider_config = _read_config(config_path)
-        zone_type = self.config['cloudstack']['zone_type']
+
+        zone_type = self.provider_config['cloudstack']['zone_type']
         zone_type = zone_type.lower()
 
         if zone_type == 'basic':
@@ -500,8 +501,9 @@ class CloudstackNetworkResourceTerminator(object):
         lgr.info('deleting agent and management keypairs')
         self.key_pair_creator.delete_keypairs()
 
-        lgr.info('deleting agent and management security-groups')
-        self.network_creator.delete_networks()
+        lgr.info('deleting agent and management networks\
+        not supported currently in libcloud')
+        #self.network_creator.delete_networks()
 
 
 class CloudstackLogicError(RuntimeError):
