@@ -49,45 +49,53 @@ DEFAULTS_CONFIG_FILE_NAME = 'cloudify-config.defaults.yaml'
 
 is_verbose_output = False
 
+
 class ProviderManager(BaseProviderClass):
+    """class for base methods name must be kept as is.
 
-    """class for base methods
-        name must be kept as is.
+    inherits BaseProviderClass from the cli containing the following
+    methods:
 
-        inherits BaseProviderClass from the cli containing the following
-        methods:
-        __init__: initializes base mandatory params provider_config and
-        is_verbose_output. additionally, optionally receives a schema param
-        that enables the default schema validation method to be executed.
-        bootstrap: installs cloudify on the management server.
-        validate_config_schema: validates a schema file against the provider
-        configuration file supplied with the provider module.
-        (for more info on BaseProviderClass, see the CLI's documentation.)
+    __init__: initializes base mandatory params provider_config and
+    is_verbose_output. additionally, optionally receives a schema param
+    that enables the default schema validation method to be executed.
 
-        ProviderManager classes:
-        __init__: *optional* - only if more params are initialized
-        provision: *mandatory*
-        validate: *mandatory*
-        teardown: *mandatory*
-        """
+    bootstrap: installs cloudify on the management server.
+
+    validate_config_schema: validates a schema file against the provider
+    configuration file supplied with the provider module.
+    (for more info on BaseProviderClass, see the CLI's documentation.)
+
+    ProviderManager classes:
+
+    - __init__: *optional* - only if more params are initialized
+    - provision: *mandatory*
+    - validate: *mandatory*
+    - teardown: *mandatory*
+    """
 
     def __init__(self, provider_config=None, is_verbose_output=False):
         """
         initializes base params.
+
         provider_config and is_verbose_output are initialized in the
         base class and are mandatory. if more params are needed, super can
-        be used to init provider_config and is_verbose_output.
+        be used to init a different provider_config and is_verbose_output.
+
+        "schema" is an optional parameter containing a jsonschema
+        object (dict). If initialized it will automatically trigger schema
+        validation for the provider. Schema validation will be performed
+        using the default validate_schema method (from the base class).
+        a new "validate_schema" method can be supplied if needed to replace
+        the default one.
 
         :param dict provider_config: inherits the config yaml from the cli
         :param bool is_verbose_output: self explanatory
-        :param dict schema: is an optional parameter containing a jsonschema
-        object. If initialized it will automatically trigger schema validation
-        for the provider.
+        :param dict schema: json schema for validation
         """
         self.provider_config = provider_config
         super(ProviderManager, self).__init__(provider_config,
                                               is_verbose_output)
-
 
     def _get_private_key_path_from_keypair_config(self, keypair_config):
         path = keypair_config['provided']['private_key_filepath'] if \
@@ -96,7 +104,7 @@ class ProviderManager(BaseProviderClass):
         return expanduser(path)
 
     def copy_files_to_manager(self, mgmt_ip, config, ssh_key, ssh_user):
-        def _copy(userhome_on_management,agents_key_path):
+        def _copy(userhome_on_management, agents_key_path):
 
             env.user = ssh_user
             env.key_filename = ssh_key
@@ -134,10 +142,14 @@ class ProviderManager(BaseProviderClass):
         """
         provisions resources for the management server
 
-        :rtype: 'tuple' with the machine's public and private ip's,
+        returns a tuple with the machine's public and private ip's,
         the ssh key and user configured in the config yaml and
         the prorivder's context (a dict containing the privisioned
         resources to be used during teardown)
+
+        the tuple's order should correspond with the above order.
+
+        :rtype: 'tuple' with machine context.
         """
         lgr.info('bootstrapping to Exoscale provider.')
 
@@ -161,7 +173,7 @@ class ProviderManager(BaseProviderClass):
 
         lgr.debug('reading server configuration.')
         mgmt_server_config = self.provider_config.get('compute', {}) \
-        .get('management_server', {})
+            .get('management_server', {})
 
         # init compute node creator
         compute_creator = ExoscaleComputeCreator(cloud_driver,
@@ -174,10 +186,10 @@ class ProviderManager(BaseProviderClass):
         #see cloudstack 'basic zone'
         public_ip = compute_creator.create_node()
 
-        provider_context = {"ip":str(public_ip)}
+        provider_context = {"ip": str(public_ip)}
 
-        print('public ip: ' + public_ip + ' key name: ' + self._get_private_key_path_from_keypair_config(
-            mgmt_server_config['management_keypair']) + 'user name: ' + mgmt_server_config.get('user_on_management'))
+        print('public ip: ' + public_ip + ' key name: ' + self._get_private_key_path_from_keypair_config(  # NOQA
+            mgmt_server_config['management_keypair']) + 'user name: ' + mgmt_server_config.get('user_on_management'))  # NOQA
 
         self.copy_files_to_manager(
             public_ip,
@@ -187,21 +199,25 @@ class ProviderManager(BaseProviderClass):
             mgmt_server_config.get('user_on_management'))
 
         return public_ip, \
-               public_ip, \
-               self._get_private_key_path_from_keypair_config(
-                   mgmt_server_config['management_keypair']), \
-               mgmt_server_config.get('user_on_management'), \
-               provider_context
+            public_ip, \
+            self._get_private_key_path_from_keypair_config(
+                mgmt_server_config['management_keypair']), \
+            mgmt_server_config.get('user_on_management'), \
+            provider_context
 
     def validate(self, validation_errors={}):
         """
         validations to be performed before provisioning and bootstrapping
         the management server.
 
-        :param dict schema: a schema dict to validate the provider config
-        against
-        :rtype: 'dict' representing validation_errors. provisioning will
-        continue only if the dict is empty.
+        returns a dict of lists of validation errors. each list corresponds
+        with a logical section of the validations (e.g, compute, networking..)
+
+        Note: provisioning will continue only if the returned dict is empty.
+
+        :param dict validation_errors: a dict to append the validation errors
+         to.
+        :rtype: 'dict' of validation_errors.
         """
         return validation_errors
 
@@ -211,9 +227,9 @@ class ProviderManager(BaseProviderClass):
         resources
 
         :param dict provider_context: context information with the previously
-        provisioned resources
+         provisioned resources
         :param bool ignore_validation: should the teardown process ignore
-        conflicts during teardown
+         conflicts during teardown
         :rtype: 'None'
         """
         management_ip = provider_context['ip']
@@ -235,7 +251,7 @@ class ProviderManager(BaseProviderClass):
                                                  security_group_name=None,
                                                  node_name=None)
 
-        resource_terminator = ExoscaleResourceTerminator(security_group_creator,
+        resource_terminator = ExoscaleResourceTerminator(security_group_creator,  # NOQA
                                                          keypair_creator,
                                                          compute_creator,
                                                          management_ip)
@@ -256,8 +272,8 @@ def init(target_directory, reset_config, is_verbose_output=False):
     provider_dir = os.path.dirname(os.path.realpath(__file__))
     files_path = os.path.join(provider_dir, CONFIG_FILE_NAME)
 
-    lgr.debug('Copying provider files from {0} to {1}'
-        .format(files_path, target_directory))
+    lgr.debug('Copying provider files from {0} to {1}'.format(
+        files_path, target_directory))
     shutil.copy(files_path, target_directory)
     return True
 
@@ -288,8 +304,8 @@ def _read_config(config_file_path):
             defaults_config_file_path):
         if not os.path.exists(defaults_config_file_path):
             raise ValueError('Missing the defaults configuration file; '
-                             'expected to find it at {0}'
-                .format(defaults_config_file_path))
+                             'expected to find it at {0}'.format(
+                                 defaults_config_file_path))
         raise ValueError('Missing the configuration file; expected to find '
                          'it at {0}'.format(config_file_path))
 
@@ -329,7 +345,8 @@ def _read_config(config_file_path):
 #     keypair_creator.create_key_pairs()
 #
 #     keypair_name = keypair_creator.get_management_keypair_name()
-#     security_group_name = security_group_creator.get_mgmt_security_group_name()
+#     security_group_name = \
+#         security_group_creator.get_mgmt_security_group_name()
 #
 #     # init compute node creator
 #     compute_creator = ExoscaleComputeCreator(cloud_driver,
@@ -474,7 +491,6 @@ class ExoscaleKeypairCreator(object):
                              agent_public_key_filepath,
                              agent_keypair_name)
 
-
     def _create_keypair(self, keypair_config,
                         private_key_target_path=None,
                         public_key_filepath=None,
@@ -483,8 +499,8 @@ class ExoscaleKeypairCreator(object):
         if not keypair_name:
             keypair_name = keypair_config['name']
         if not private_key_target_path:
-            private_key_target_path = keypair_config.get('auto_generated',
-                {}).get('private_key_target_path', None)
+            private_key_target_path = keypair_config.get(
+                'auto_generated', {}).get('private_key_target_path', None)
         if not public_key_filepath:
             public_key_filepath = keypair_config.get('provided', {}).get(
                 'public_key_filepath', None)
@@ -519,7 +535,8 @@ class ExoscaleKeypairCreator(object):
                 os.makedirs(os.path.dirname(private_key_target_path))
             except OSError, exc:
                 if not exc.errno == errno.EEXIST or not \
-                    os.path.isdir(os.path.dirname(private_key_target_path)):
+                        os.path.isdir(os.path.dirname(
+                            private_key_target_path)):
                     raise
 
             lgr.debug('writing private key to file {0}'.format(pk_target_path))
@@ -538,7 +555,7 @@ class ExoscaleSecurityGroupCreator(object):
                   end_port=None):
 
         lgr.debug('creating security-group rule for {0} with details {1}'
-            .format(security_group_name, locals().values()))
+                  .format(security_group_name, locals().values()))
         self.cloud_driver.ex_authorize_security_group_ingress(
             securitygroupname=security_group_name,
             startport=start_port,
@@ -547,12 +564,10 @@ class ExoscaleSecurityGroupCreator(object):
             protocol=protocol)
 
     def get_security_group(self, security_group_name):
-        security_groups = [sg for sg in self.cloud_driver
-            .ex_list_security_groups() if sg['name'] == security_group_name]
+        security_groups = [sg for sg in self.cloud_driver.ex_list_security_groups() if sg['name'] == security_group_name]  # NOQA
         if security_groups.__len__() == 0:
             return None
         return security_groups[0]
-
 
     def delete_security_groups(self):
 
@@ -560,11 +575,12 @@ class ExoscaleSecurityGroupCreator(object):
         lgr.debug('deleting management security-group {0}'.format(
             mgmt_security_group_name))
         try:
-            self.cloud_driver.ex_delete_security_group(mgmt_security_group_name)
+            self.cloud_driver.ex_delete_security_group(
+                mgmt_security_group_name)
         except:
             lgr.warn(
                 'management security-group {0} may not have been deleted'
-                    .format(mgmt_security_group_name))
+                .format(mgmt_security_group_name))
             pass
 
         agents_security_group_name = self._get_agent_security_group_name()
@@ -606,8 +622,8 @@ class ExoscaleSecurityGroupCreator(object):
         management_sg_name = management_sg_config['name']
 
         if not self._is_sg_exists(management_sg_name):
-            lgr.info('creating management security group: {0}'
-                .format(management_sg_name))
+            lgr.info('creating management security group: {0}'.format(
+                management_sg_name))
             self.cloud_driver.ex_create_security_group(management_sg_name)
 
             mgmt_ports = management_sg_config['ports']
@@ -645,7 +661,8 @@ class ExoscaleSecurityGroupCreator(object):
                                protocol=protocol)
         else:
             lgr.info(
-                'using existing agent security group {0}'.format(agent_sg_name))
+                'using existing agent security group {0}'.format(
+                    agent_sg_name))
 
 
 class ExoscaleComputeCreator(object):
@@ -704,5 +721,3 @@ class ExoscaleComputeCreator(object):
             size=size)
 
         return result.public_ips[0]
-
-
