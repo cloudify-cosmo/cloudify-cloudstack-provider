@@ -19,12 +19,6 @@ from setuptools import setup
 
 VERSION = '1.0'
 
-COSMO_CLI_VERSION = '3.0'
-COSMO_CLI_BRANCH = 'develop'
-COSMO_CLI = 'https://github.com/cloudify-cosmo/cloudify-cli/tarball/' \
-            '{0}#egg=cloudify-cli-{1}'.format(
-    COSMO_CLI_BRANCH, COSMO_CLI_VERSION)
-
 setup(
     name='cloudify-exoscale',
     version=VERSION,
@@ -42,7 +36,6 @@ setup(
         "IPy",
         "PyYAML",
         "apache-libcloud>=0.14.1",
-        "cloudify-cli"
+        'cloudify-cli==3.0',
     ],
-    dependency_links=[COSMO_CLI]
 )

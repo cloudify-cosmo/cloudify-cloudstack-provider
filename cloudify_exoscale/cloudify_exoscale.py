@@ -156,14 +156,14 @@ class ProviderManager(BaseProviderClass):
         lgr.debug('reading configuration file')
         # provider_config = _read_config(None)
 
-        #init keypair and security-group resource creators.
+        # init keypair and security-group resource creators.
         cloud_driver = ExoscaleConnector(self.provider_config).create()
         keypair_creator = ExoscaleKeypairCreator(
             cloud_driver, self.provider_config)
         security_group_creator = ExoscaleSecurityGroupCreator(
             cloud_driver, self.provider_config)
 
-        #create required node topology
+        # create required node topology
         lgr.debug('creating the required resources for management vm')
         security_group_creator.create_security_groups()
         keypair_creator.create_key_pairs()
@@ -181,9 +181,9 @@ class ProviderManager(BaseProviderClass):
                                                  keypair_name,
                                                  sg_name)
 
-        #spinning-up a new instance using the above topology.
-        #Exoscale provider supports only public ip allocation.
-        #see cloudstack 'basic zone'
+        # spinning-up a new instance using the above topology.
+        # Exoscale provider supports only public ip allocation.
+        # see cloudstack 'basic zone'
         public_ip = compute_creator.create_node()
 
         provider_context = {"ip": str(public_ip)}
@@ -238,7 +238,7 @@ class ProviderManager(BaseProviderClass):
         # lgr.debug('reading configuration file {0}'.format(config_path))
         # provider_config = _read_config(config_path)
 
-        #init keypair and security-group resource creators.
+        # init keypair and security-group resource creators.
         cloud_driver = ExoscaleConnector(self.provider_config).create()
         keypair_creator = ExoscaleKeypairCreator(
             cloud_driver, self.provider_config)
@@ -368,7 +368,7 @@ def _read_config(config_file_path):
 #     return public_ip
 
 
-#TODO: no config_path named property on openstack. why?
+# TODO: no config_path named property on openstack. why?
 # def teardown(management_ip,
 #              is_verbose_output=False,
 #              config_path=None):
@@ -627,7 +627,7 @@ class ExoscaleSecurityGroupCreator(object):
             self.cloud_driver.ex_create_security_group(management_sg_name)
 
             mgmt_ports = management_sg_config['ports']
-            #for each port, add rule
+            # for each port, add rule
             for port in mgmt_ports:
                 cidr = management_sg_config.get('cidr', None)
                 protocol = management_sg_config.get('protocol', None)
@@ -650,7 +650,7 @@ class ExoscaleSecurityGroupCreator(object):
             self.cloud_driver.ex_create_security_group(agent_sg_name)
 
             agent_ports = agent_sg_config['ports']
-            #for each port, add rule
+            # for each port, add rule
             for port in agent_ports:
                 cidr = agent_sg_config['cidr']
                 protocol = agent_sg_config['protocol']

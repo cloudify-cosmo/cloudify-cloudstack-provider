@@ -30,14 +30,13 @@ import logging
 class ExoscaleProviderTestCase(unittest.TestCase):
     lgr = logging.getLogger('unittest')
 
-
     def test_provider_init(self):
         """
         Check initialization validity.
         """
         # is_init_valid = init(__file__, True)
-        #if not is_init_valid:
-        #raise AssertionError("Failed initializing Exoscale Provider.")
+        # if not is_init_valid:
+        # raise AssertionError("Failed initializing Exoscale Provider.")
 
     def test_create_keypairs(self):
         """
@@ -49,7 +48,7 @@ class ExoscaleProviderTestCase(unittest.TestCase):
 
         provider_config = _read_config(None)
 
-        #setting special unit-test keynames.
+        # setting special unit-test keynames.
         provider_config['compute']['management_server'][
             'management_keypair']['name'] = mgmt_key_name
         provider_config['compute']['agent_servers'][
@@ -89,7 +88,6 @@ class ExoscaleProviderTestCase(unittest.TestCase):
             except:
                 pass
 
-
     def test_keypair_import(self):
         """
         Tests public key import, passing public key path
@@ -102,7 +100,7 @@ class ExoscaleProviderTestCase(unittest.TestCase):
         mgmt_key_name = 'temp-unittest-management-key'
         agent_key_name = 'temp-unittest-agent-key'
 
-        #setting special unit-test keynames.
+        # setting special unit-test keynames.
         provider_config['compute']['management_server'][
             'management_keypair']['name'] = mgmt_key_name
         provider_config['compute']['agent_servers'][
@@ -136,7 +134,6 @@ class ExoscaleProviderTestCase(unittest.TestCase):
             except:
                 pass
 
-
     def test_get_keypair(self):
 
         key_name = "temp_unittest_key"
@@ -159,7 +156,6 @@ class ExoscaleProviderTestCase(unittest.TestCase):
 
         cloud_driver.ex_delete_keypair(key_name)
 
-
     def test_create_security_group(self):
         """
         Tests create security group.
@@ -168,7 +164,7 @@ class ExoscaleProviderTestCase(unittest.TestCase):
         agent_security_group_name = 'temp_unittest-agent-sg'
         provider_config = _read_config(None)
 
-        #change security-group name so test will not affect production
+        # change security-group name so test will not affect production
         provider_config['networking']['management_security_group'][
             'name'] = management_security_group_name
         provider_config['networking']['agents_security_group'][
@@ -186,7 +182,8 @@ class ExoscaleProviderTestCase(unittest.TestCase):
                 raise AssertionError(
                     'expecting to find security group {0}'.format(
                         management_security_group_name))
-            if sg_creator.get_security_group(agent_security_group_name) is None:
+            if sg_creator.get_security_group(
+                    agent_security_group_name) is None:
                 raise AssertionError(
                     'expecting to find security group {0}'.format(
                         agent_security_group_name))
@@ -197,11 +194,11 @@ class ExoscaleProviderTestCase(unittest.TestCase):
                     management_security_group_name):
                 raise AssertionError(
                     'expecting security group {0} to be deleted'.format(
-                    management_security_group_name))
+                        management_security_group_name))
             if sg_creator.get_security_group(agent_security_group_name):
                 raise AssertionError(
                     'expecting security group {0} to be deleted'.format(
-                    agent_security_group_name))
+                        agent_security_group_name))
         finally:
             try:
                 self.cloud_driver.ex_delete_security_group(
@@ -221,14 +218,15 @@ class ExoscaleProviderTestCase(unittest.TestCase):
         """
         provider_config = _read_config(None)
 
-        #security-group use_existing=True
+        # security-group use_existing=True
         provider_config['networking']['management_security_group'][
             'use_existing'] = True
         provider_config['networking']['management_security_group'][
             'name'] = 'non-existing-sg'
 
         cloud_driver = ExoscaleConnector(provider_config).create()
-        sg_creator = ExoscaleSecurityGroupCreator(cloud_driver, provider_config)
+        sg_creator = ExoscaleSecurityGroupCreator(
+            cloud_driver, provider_config)
         try:
             sg_creator.create_security_groups()
             raise AssertionError(
@@ -260,10 +258,3 @@ class ExoscaleProviderTestCase(unittest.TestCase):
                 'raise an error as expected')
         except ExoscaleLogicError:
             pass
-
-
-
-
-
-
-
