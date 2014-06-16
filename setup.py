@@ -41,7 +41,7 @@ setup(
         "jsonschema",
         "IPy",
         "PyYAML",
-        "apache-libcloud<=0.13.3",
+        "apache-libcloud==0.14.2",
         "cloudify-cli"
     ],
     dependency_links=[COSMO_CLI]
