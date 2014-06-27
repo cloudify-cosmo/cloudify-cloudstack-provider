@@ -26,7 +26,7 @@ COSMO_CLI = 'https://github.com/cloudify-cosmo/cloudify-cli/tarball/' \
     COSMO_CLI_BRANCH, COSMO_CLI_VERSION)
 
 setup(
-    name='cloudify-cloudstack',
+    name='cloudify-cloudstack-provider',
     version=VERSION,
     author='adaml',
     author_email='adaml@gigaspaces.com',

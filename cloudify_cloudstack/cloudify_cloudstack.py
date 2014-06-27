@@ -175,6 +175,12 @@ class ProviderManager(BaseProviderClass):
                                                      keypair_name,
                                                      sg_name)
 
+            #spinning-up a new instance using the above topology.
+            #Cloudstack provider supports only public ip allocation.
+            #see cloudstack 'basic zone'
+
+            compute_creator.create_node()
+
         if zone_type == 'advanced':
 
             lgr.debug('Using the advanced zone path')
@@ -185,8 +191,7 @@ class ProviderManager(BaseProviderClass):
             #create required node topology
             lgr.debug('creating the required resources for management vm')
 
-            #Libcloud cannot create networks (yet) on advanced zones
-            #network_creator.create_networks()
+            network_creator.create_networks()
             keypair_creator.create_key_pairs()
 
             keypair_name = keypair_creator.get_management_keypair_name()
@@ -205,36 +210,48 @@ class ProviderManager(BaseProviderClass):
                                                      keypair_name,
                                                      netw)
 
+            public_ip = network_creator.get_mgmt_pub_ip()
+            node = compute_creator.create_node(public_ip)
+
+            # Getting network config for portmaps, in advanced zones portmaps are
+            # mapped to a node so we need to create portmaps after node creation
+
+            lgr.debug('reading management network configuration.')
+            management_network_config = self.provider_config['networking'][
+                'management_network']
+            #management_network_name = management_network_config['name']
+
+            mgmt_ports = management_network_config['ports']
+
+            #for each port, add forward rule
+            for port in mgmt_ports:
+                    #cidr = management_sg_config.get('cidr', None)
+                    
+                    protocol = management_network_config.get('protocol', None)
+                    network_creator.add_port_fwd_rule(public_ip, port, port, 
+                                                      protocol,
+                                                      node)
+
         else:
             lgr.debug(
             'cloudstack -> zone_type must be either basic or advanced')
 
-        #spinning-up a new instance using the above topology.
-        #Cloudstack provider supports only public ip allocation.
-        #see cloudstack 'basic zone'
-        node = compute_creator.create_node()
-
-        public_ip = network_creator.get_mgmt_pub_ip()
-        #TODO: need to read from config.
-        #network_creator.add_port_fwd_rule(public_ip, 22, 22, 'TCP', node)
-        #network_creator.add_port_fwd_rule(public_ip, 80, 80, 'TCP', node)
-
         provider_context = {"ip": str(public_ip)}
 
-        print('public ip: ' + public_ip + ' key name: ' + self.
+        print('public ip: ' + public_ip.address + ' key name: ' + self.
               _get_private_key_path_from_keypair_config(
             mgmt_server_config['management_keypair']) + 'user name: ' +
               mgmt_server_config.get('user_on_management'))
 
         self.copy_files_to_manager(
-            public_ip,
+            public_ip.address,
             self.provider_config,
             self._get_private_key_path_from_keypair_config(
                 mgmt_server_config['management_keypair']),
             mgmt_server_config.get('user_on_management'))
 
-        return public_ip, \
-               public_ip, \
+        return public_ip.address, \
+               public_ip.address, \
                self._get_private_key_path_from_keypair_config(
                    mgmt_server_config['management_keypair']), \
                mgmt_server_config.get('user_on_management'), \
@@ -803,9 +820,30 @@ class CloudstackNetworkCreator(object):
         return mgmt_netw_conf['name']
 
     def get_mgmt_pub_ip(self):
-        mgmt_pub_ip = self.provider_config['networking'][
-            'management_network']
-        return mgmt_pub_ip['public_ip']
+        mgmt_net = self.provider_config['networking'][
+            'management_network']['name']
+
+        nets = self.get_networks()
+
+        for net in nets:
+            if net.name == mgmt_net:
+                lgr.debug('Management Network {0} found!'.format(net.name))
+                break
+            else:
+                raise RuntimeError('Management network {0} not found'.
+                                   format(mgmt_net))
+
+        publicips = self.cloud_driver.ex_list_public_ips()
+
+        for public_ip in publicips:
+
+            if public_ip.associated_network_id == net.id:
+                lgr.debug('Found acquired Public IP: {0} with ID {1} '
+                          'Associated with network id {2}'.
+                          format(public_ip.address, public_ip.id, net.id))
+                return public_ip
+        else:
+            raise RuntimeError('No matching mgmt public ip found')
 
     def get_agent_pub_ip(self):
         agent_pub_ip = self.provider_config['networking'][
@@ -825,18 +863,52 @@ class CloudstackNetworkCreator(object):
 
     def create_networks(self):
 
-        # Libcloud cannot create networks
-
         lgr.debug('reading management network configuration.')
         management_netw_config = self.provider_config['networking'][
             'management_network']
         management_netw_name = management_netw_config['name']
-
+        use_existing = management_netw_config['use_existing']
+        
         if not self._is_netw_exists(management_netw_name):
-            lgr.warn('network: {0} does not exist, please create first. \
-            Network creation is not supported in advanced zones'
-                .format(management_netw_name))
+            if not use_existing == False:
+                raise RuntimeError('No existing network and use_existing '
+                                   'set to true')
 
+            if not use_existing == True:
+                lgr.info('Creating network {0} since use_existing is false '
+                         'and network does not exist'
+                         .format(management_netw_name))
+
+                netmask = management_netw_config['network_mask']
+                gateway = management_netw_config['network_gateway']
+                net_offering = management_netw_config['network_offering']
+                domain = management_netw_config['network_domain']
+                zone = management_netw_config['network_zone']
+                locations = self.cloud_driver.list_locations()
+                offerings = self.cloud_driver.ex_list_network_offerings()
+
+                for location in locations:
+                    if zone == location.name:
+                        break
+                    else:
+                        raise RuntimeError('Specified location cannot be '
+                                           'found!')
+
+                for offering in offerings:
+                    if net_offering == offering.name:
+                        break
+                    else:
+                        raise RuntimeError('Specified network offering '
+                                           'cannot be found!')
+                print offering
+                print location
+                self.cloud_driver.ex_create_network(management_netw_name,
+                                                    management_netw_name,
+                                                    offering,
+                                                    location,
+                                                    gateway,
+                                                    netmask,
+                                                    domain)
         else:
             lgr.info('using existing management network {0}'.format(
                 management_netw_name))
@@ -847,8 +919,8 @@ class CloudstackNetworkCreator(object):
         agent_netw_name = agent_netw_config['name']
 
         if not self._is_netw_exists(agent_netw_name):
-            lgr.info('network: {0} does not exist, please create first. \
-            Network creation is not supported in advanced zones'
+            lgr.info('network: {0} does not exist, please create first.'
+                     'Network creation is not supported in advanced zones'
                      .format(agent_netw_name))
 
         else:
@@ -934,7 +1006,7 @@ class CloudstackNetworkComputeCreator(object):
         lgr.debug('destroying node {0}'.format(node))
         self.cloud_driver.destroy_node(node)
 
-    def create_node(self):
+    def create_node(self,public_ip):
 
         lgr.debug('reading server configuration.')
         server_config = self.provider_config.get('compute', {}) \
@@ -963,12 +1035,14 @@ class CloudstackNetworkComputeCreator(object):
         lgr.info(
             'starting a new virtual instance named {0} on network {1}'
             .format(self.node_name, self.network_names))
-        result = self.cloud_driver.create_node(
+        node = self.cloud_driver.create_node(
             name=self.node_name,
             ex_keyname=self.keypair_name,
             networks=self.network_names,
             image=image,
             size=size)
 
-        
-        return result.private_ips[0]
+       
+                
+                                
+        return node
