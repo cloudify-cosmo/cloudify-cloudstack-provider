@@ -40,23 +40,45 @@ networking:
     agents_network:
         use_existing: true
         name: cloudify-agents-network
-        public_ip: xxx.xxx.xxx.xxx
+        network_type: advanced
+        network_offering: SourceNatNiciraNvpNetwork
+        network_gateway: 10.10.1.1
+        network_mask: 255.255.255.0
+        network_zone: BETA-SBP-DC-1
+        network_domain: 'cloudify-agent.local'
         protocol: TCP
         cidr: 0.0.0.0/0
         ports: [22, 27017, 28017, 8080]
     management_network:
         use_existing: true
         name: cloudify-management-network
-        public_ip: xxx.xxx.xxx.xxx
+        network_type: advanced
+        network_offering: SourceNatNiciraNvpNetwork
+        network_gateway: 10.10.1.1
+        network_mask: 255.255.255.0
+        network_zone: BETA-SBP-DC-1
+        network_domain: 'cloudify-mgmt.local'
         protocol: TCP
         cidr: 0.0.0.0/0
         ports: [5555, 5672, 53229, 22, 8100, 80]
+#    agents_security_group:
+#        use_existing: False
+#        name: cloudify-sg-agents
+#        protocol: TCP
+#        cidr: 0.0.0.0/0
+#        ports: [22, 27018, 28018]
+#    management_security_group:
+#        use_existing: False
+#        name: cloudify-sg-management
+#        protocol: TCP
+#        cidr: 0.0.0.0/0
+#        ports: [5555, 5672, 53229, 22, 8100, 80]
 
 cloudify:
     cloudify_components_package_url: http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/nightly/cloudify-components_amd64.deb
     cloudify_core_package_url: http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/nightly/cloudify-core_amd64.deb
     cloudify_ui_package_url: http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/nightly/cloudify-ui_amd64.deb
-    cloudify_ubuntu_agent_url: http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/nightly/ubuntu-agent_amd64.deb
+    cloudify_ubuntu_agent_url: http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/nightly/cloudify-ubuntu-agent_amd64.deb
 
     cloudify_agent:
         min_workers: 2
