@@ -35,7 +35,7 @@ setup(
         "jsonschema",
         "IPy",
         "PyYAML",
-        "apache-libcloud>=0.14.1",
+        "apache-libcloud>=0.15.0",
         'cloudify-cli==3.0',
     ],
 )
