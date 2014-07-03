@@ -210,8 +210,8 @@ class ProviderManager(BaseProviderClass):
                                                      keypair_name,
                                                      netw)
 
+            node = compute_creator.create_node()
             public_ip = network_creator.get_mgmt_pub_ip()
-            node = compute_creator.create_node(public_ip)
 
             # Getting network config for portmaps, in advanced zones portmaps are
             # mapped to a node so we need to create portmaps after node creation
@@ -1006,7 +1006,7 @@ class CloudstackNetworkComputeCreator(object):
         lgr.debug('destroying node {0}'.format(node))
         self.cloud_driver.destroy_node(node)
 
-    def create_node(self,public_ip):
+    def create_node(self):
 
         lgr.debug('reading server configuration.')
         server_config = self.provider_config.get('compute', {}) \
