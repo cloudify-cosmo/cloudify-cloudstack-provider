@@ -826,11 +826,12 @@ class CloudstackNetworkCreator(object):
         nets = self.get_networks()
 
         for net in nets:
+            print net.name
             if net.name == mgmt_net:
                 lgr.debug('Management Network {0} found!'.format(net.name))
                 break
-            else:
-                raise RuntimeError('Management network {0} not found'.
+        else:
+            raise RuntimeError('Management network {0} not found'.
                                    format(mgmt_net))
 
         publicips = self.cloud_driver.ex_list_public_ips()
