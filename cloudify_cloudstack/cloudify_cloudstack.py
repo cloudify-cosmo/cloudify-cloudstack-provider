@@ -14,10 +14,10 @@
 # limitations under the License.
 ############
 
-__author__ = 'adaml'
+__author__ = 'rkuipers'
 import os
 import shutil
-import pprint
+
 from copy import deepcopy
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
@@ -210,12 +210,6 @@ class ProviderManager(BaseProviderClass):
             .get('management_server', {})
 
             nets = netw + agent_netw
-            
-            
-            print nets
-            
-            for net in nets:
-                print net.id
 
             # init compute node creator
             compute_creator = CloudstackNetworkComputeCreator(cloud_driver,
@@ -239,7 +233,6 @@ class ProviderManager(BaseProviderClass):
             #for each port, add forward rule
             for port in mgmt_ports:
                     #cidr = management_sg_config.get('cidr', None)
-                    
                     protocol = management_network_config.get('protocol', None)
                     network_creator.add_port_fwd_rule(public_ip, port, port, 
                                                       protocol,
@@ -1097,7 +1090,4 @@ class CloudstackNetworkComputeCreator(object):
             image=image,
             size=size)
 
-       
-                
-                                
         return node
