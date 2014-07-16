@@ -4,8 +4,8 @@ authentication:
     api_url: 'https://cloudstack/client/api'
 
 # zone type basic or advanced
-cloudstack:
-	zone_type: 'basic'    
+# cloudstack:
+#	zone_type: 'basic'    
 
 # compute:
 #     management_server:

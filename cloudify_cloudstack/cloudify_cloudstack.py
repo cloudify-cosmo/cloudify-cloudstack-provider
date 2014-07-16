@@ -200,15 +200,28 @@ class ProviderManager(BaseProviderClass):
             netw = network_creator.get_network(netw_name)
             lgr.debug(' network id {0}'.format(netw))
 
+            agent_netw_name = network_creator.get_agent_network_name()
+            lgr.debug(' agent network name {0}'.format(agent_netw_name))
+            agent_netw = network_creator.get_network(agent_netw_name)
+            lgr.debug(' agent network id {0}'.format(agent_netw))
+
             lgr.debug('reading server configuration.')
             mgmt_server_config = self.provider_config.get('compute', {}) \
             .get('management_server', {})
+
+            nets = netw + agent_netw
+            
+            
+            print nets
+            
+            for net in nets:
+                print net.id
 
             # init compute node creator
             compute_creator = CloudstackNetworkComputeCreator(cloud_driver,
                                                      self.provider_config,
                                                      keypair_name,
-                                                     netw)
+                                                     nets)
 
             node = compute_creator.create_node()
             public_ip = network_creator.get_mgmt_pub_ip()
@@ -851,7 +864,7 @@ class CloudstackNetworkCreator(object):
             'agent_network']
         return agent_pub_ip['public_ip']
 
-    def _get_agent_network_name(self):
+    def get_agent_network_name(self):
         agent_netw_conf = self.provider_config['networking'][
             'agents_network']
         return agent_netw_conf['name']
@@ -867,9 +880,14 @@ class CloudstackNetworkCreator(object):
         lgr.debug('reading management network configuration.')
         management_netw_config = self.provider_config['networking'][
             'management_network']
+        agent_netw_config = self.provider_config['networking'][
+            'agents_network']
         management_netw_name = management_netw_config['name']
         use_existing = management_netw_config['use_existing']
-        
+
+        agent_netw_name = agent_netw_config['name']
+        agent_use_existing = agent_netw_config['use_existing']
+
         if not self._is_netw_exists(management_netw_name):
             if not use_existing == False:
                 raise RuntimeError('No existing network and use_existing '
@@ -920,9 +938,45 @@ class CloudstackNetworkCreator(object):
         agent_netw_name = agent_netw_config['name']
 
         if not self._is_netw_exists(agent_netw_name):
-            lgr.info('network: {0} does not exist, please create first.'
-                     'Network creation is not supported in advanced zones'
-                     .format(agent_netw_name))
+            if not agent_use_existing == False:
+                raise RuntimeError('No existing agent network and use_existing '
+                                   'set to true')
+
+            if not agent_use_existing == True:
+                lgr.info('Creating agent network {0} since use_existing is false '
+                         'and network does not exist'
+                         .format(agent_netw_name))
+
+                netmask = agent_netw_config['network_mask']
+                gateway = agent_netw_config['network_gateway']
+                net_offering = agent_netw_config['network_offering']
+                domain = agent_netw_config['network_domain']
+                zone = agent_netw_config['network_zone']
+                locations = self.cloud_driver.list_locations()
+                offerings = self.cloud_driver.ex_list_network_offerings()
+
+                for location in locations:
+                    if zone == location.name:
+                        break
+                    else:
+                        raise RuntimeError('Specified location cannot be '
+                                           'found!')
+
+                for offering in offerings:
+                    if net_offering == offering.name:
+                        break
+                    else:
+                        raise RuntimeError('Specified network offering '
+                                           'cannot be found!')
+                print offering
+                print location
+                self.cloud_driver.ex_create_network(agent_netw_name,
+                                                    agent_netw_name,
+                                                    offering,
+                                                    location,
+                                                    gateway,
+                                                    netmask,
+                                                    domain)
 
         else:
             lgr.info(
