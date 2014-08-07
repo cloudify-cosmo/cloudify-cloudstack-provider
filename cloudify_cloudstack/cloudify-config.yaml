@@ -1,0 +1,113 @@
+authentication:
+    api_key: 'API_KEY'
+    api_secret_key: 'API_SECRET_KEY'
+    api_url: 'https://cloudstack/client/api'
+
+# zone type basic or advanced
+# cloudstack:
+#	zone_type: 'basic'    
+
+# compute:
+#     management_server:
+#         user_on_management: root
+#         userhome_on_management: /root
+#         instance:
+#             use_existing: false
+#             name: cloudify-management-server
+#             image: 299fd26a-2b4f-4ff4-acfd-23d2682d65ba
+#             size: Medium
+#         management_keypair:
+#             use_existing: true
+#             name: cloudify-management-kp
+# #            provided:
+# #                public_key_filepath:
+# #                private_key_filepath: ~/.ssh/cloudify-management-kp.pem
+#             auto_generated:
+#                 private_key_target_path: ~/.ssh/cloudify-management-kp.pem
+#     agent_servers:
+#         agents_keypair:
+#             use_existing: true
+#             name: cloudify-agents-kp
+# #            provided:
+# #                public_key_filepath:
+# #                private_key_filepath: ~/.ssh/cloudify-agents-kp.pem
+#             auto_generated:
+#                 private_key_target_path: ~/.ssh/cloudify-agents-kp.pem
+
+
+#networking:
+#    agents_network:
+#        use_existing: true
+#        name: cloudify-agents-network
+#        network_type: advanced
+#        network_offering: SourceNatNiciraNvpNetwork
+#        network_gateway: 10.10.1.1
+#        network_mask: 255.255.255.0
+#        network_zone: BETA-SBP-DC-1
+#        network_domain: 'cloudify-agent.local'
+#        protocol: TCP
+#        cidr: 0.0.0.0/0
+#        ports: [22, 27017, 28017, 8080]
+#    management_network:
+#        use_existing: true
+#        name: cloudify-management-network
+#        network_type: advanced
+#        network_offering: SourceNatNiciraNvpNetwork
+#        network_gateway: 10.10.1.1
+#        network_mask: 255.255.255.0
+#        network_zone: BETA-SBP-DC-1
+#        network_domain: 'cloudify-mgmt.local'
+#        protocol: TCP
+#        cidr: 0.0.0.0/0
+#        ports: [5555, 5672, 53229, 22, 8100, 80]
+#    agents_security_group:
+#        use_existing: False
+#        name: cloudify-sg-agents
+#        protocol: TCP
+#        cidr: 0.0.0.0/0
+#        ports: [22, 27018, 28018]
+#    management_security_group:
+#        use_existing: False
+#        name: cloudify-sg-management
+#        protocol: TCP
+#        cidr: 0.0.0.0/0
+#        ports: [5555, 5672, 53229, 22, 8100, 80]
+
+# # Cloudify Installation Configuration
+##################################
+# cloudify:
+#    # You would probably want a prefix that ends with underscore or dash
+#    resources_prefix: your_name_here
+#   server:
+#        packages:
+#	    	components_package_url: http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.1.0/m1-RELEASE/cloudify-components_3.1.0-m1-b7_amd64.deb
+#			core_package_url: http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.1.0/m1-RELEASE/cloudify-core_3.1.0-m1-b7_amd64.deb
+#			ui_package_url: http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.1.0/m1-RELEASE/cloudify-ui_3.1.0-m1-b7_amd64.deb
+#   agents:
+#       packages:
+#			ubuntu_agent_url: http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.1.0/m1-RELEASE/cloudify-ubuntu-agent_3.1.0-m1-b7_amd64.deb
+#			centos_agent_url: http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.1.0/m1-RELEASE/cloudify-centos-agent_3.1.0-m1-b7_amd64.deb
+#			windows_agent_url: http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.1.0/m1-RELEASE/cloudify-windows-agent_3.1.0-m1-b7_amd64.deb
+#        config:
+#            min_workers: 2
+#            max_workers: 5
+#            remote_execution_port: 22
+#            # user: Enter-Default-Image-User-Here-(Optional)
+#    workflows:
+#        task_retries: -1  # -1 means we retry forever
+#        retry_interval: 30
+#    bootstrap:
+#        ssh:
+#            # number of retries for the initial connectivity check with the management server
+#            initial_connectivity_retries: 25
+#            # wait time (in seconds) in between the aforementioned retries
+#            initial_connectivity_retries_interval: 5
+#            # number of retries for bootstrap commands run via SSH
+#            command_retries: 3
+#            # wait time (in seconds) in between the aforementioned retries
+#            retries_interval: 3
+#            # number of SSH connection attempts (in a single retry)
+#            connection_attempts: 1
+#            # timeout (in seconds) for an SSH connection
+#            socket_timeout: 10
+

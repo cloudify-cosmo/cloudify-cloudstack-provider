@@ -26,14 +26,16 @@ COSMO_CLI = 'https://github.com/cloudify-cosmo/cloudify-cli/tarball/' \
     COSMO_CLI_BRANCH, COSMO_CLI_VERSION)
 
 setup(
-    name='cloudify-exoscale',
+    name='cloudify-cloudstack-provider',
     version=VERSION,
     author='adaml',
     author_email='adaml@gigaspaces.com',
-    packages=['cloudify_exoscale'],
+    packages=['cloudify_exoscale','cloudify_cloudstack'],
     license='LICENSE',
-    description='the cloudify exoscale provider',
+    description='the cloudify cloudstack provider',
     package_data={'cloudify_exoscale': ['cloudify-config.yaml',
+                                        'cloudify-config.defaults.yaml'],
+                  'cloudify_cloudstack':['cloudify-config.yaml',
                                         'cloudify-config.defaults.yaml']},
     install_requires=[
         "scp",
@@ -41,7 +43,7 @@ setup(
         "jsonschema",
         "IPy",
         "PyYAML",
-        "apache-libcloud>=0.14.1",
+        "apache-libcloud>=0.15.1",
         "cloudify-cli"
     ],
     dependency_links=[COSMO_CLI]

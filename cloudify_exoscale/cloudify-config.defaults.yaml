@@ -45,8 +45,8 @@ networking:
         ports: [5555, 5672, 53229, 22, 8100, 80]
 
 cloudify:
-    cloudify_components_package_url: http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.0.0/nightly_1-342/cloudify-components_3.0.0-rc-b1-342_amd64.deb
-    cloudify_core_package_url: http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.0.0/nightly_1-342/cloudify-core_3.0.0-rc-b1-342_amd64.deb
-    cloudify_ui_package_url: http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.0.0/nightly_1-342/ubuntu-agent_3.0.0-rc-b1-342_amd64.deb
-    cloudify_ubuntu_agent_url: http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.0.0/nightly_1-342/cloudify-ui_3.0.0-rc-b1-342_amd64.deb
+    cloudify_components_package_url: http://repository.cloudifysource.org/org/cloudify3/3.0.0/stable-nightly_4/cloudify-components_3.0.0-m4-b4_amd64.deb
+    cloudify_core_package_url: http://repository.cloudifysource.org/org/cloudify3/3.0.0/stable-nightly_4/cloudify-core_3.0.0-m4-b4_amd64.deb
+    cloudify_ui_package_url: http://repository.cloudifysource.org/org/cloudify3/3.0.0/stable-nightly_4/cloudify-ui_3.0.0-m4-b4_amd64.deb
+    cloudify_ubuntu_agent_url: http://repository.cloudifysource.org/org/cloudify3/3.0.0/stable-nightly_4/cloudify-ubuntu-agent_3.0.0-m4-b4_amd64.deb
 
