@@ -23,6 +23,7 @@ from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
 import yaml
 import errno
+import time
 
 from fabric.api import put, env
 from fabric.context_managers import settings
@@ -114,6 +115,7 @@ class ProviderManager(BaseProviderClass):
 
             lgr.info('uploading agents private key to manager')
             # TODO: handle failed copy operations
+            time.sleep(5)
             put(agents_key_path, userhome_on_management + '/.ssh')
 
         def _get_private_key_path_from_keypair_config(keypair_config):
@@ -179,7 +181,7 @@ class ProviderManager(BaseProviderClass):
             #Cloudstack provider supports only public ip allocation.
             #see cloudstack 'basic zone'
 
-            compute_creator.create_node()
+            public_ip = compute_creator.create_node()
 
         if zone_type == 'advanced':
 
@@ -198,18 +200,18 @@ class ProviderManager(BaseProviderClass):
             netw_name = network_creator.get_mgmt_network_name()
             lgr.debug(' network name {0}'.format(netw_name))
             netw = network_creator.get_network(netw_name)
-            lgr.debug(' network id {0}'.format(netw))
+            lgr.debug(' network id {0}'.format(netw[0].id))
 
-            agent_netw_name = network_creator.get_agent_network_name()
-            lgr.debug(' agent network name {0}'.format(agent_netw_name))
-            agent_netw = network_creator.get_network(agent_netw_name)
-            lgr.debug(' agent network id {0}'.format(agent_netw))
+            #agent_netw_name = network_creator.get_agent_network_name()
+            #lgr.debug(' agent network name {0}'.format(agent_netw_name))
+            #agent_netw = network_creator.get_network(agent_netw_name)
+            #lgr.debug(' agent network id {0}'.format(agent_netw))
 
             lgr.debug('reading server configuration.')
             mgmt_server_config = self.provider_config.get('compute', {}) \
             .get('management_server', {})
 
-            nets = netw + agent_netw
+            nets = netw
 
             # init compute node creator
             compute_creator = CloudstackNetworkComputeCreator(cloud_driver,
@@ -218,46 +220,60 @@ class ProviderManager(BaseProviderClass):
                                                      nets)
 
             node = compute_creator.create_node()
-            public_ip = network_creator.get_mgmt_pub_ip()
 
-            # Getting network config for portmaps, in advanced zones portmaps are
-            # mapped to a node so we need to create portmaps after node creation
-
+            # Getting network config for portmaps, in advanced zones portmaps
+            # are mapped to a node so we need to create portmaps
+            # after node creation
             lgr.debug('reading management network configuration.')
             management_network_config = self.provider_config['networking'][
                 'management_network']
             #management_network_name = management_network_config['name']
 
-            mgmt_ports = management_network_config['ports']
+            # If we need to use an existing network we do not config portfwd
+            if not management_network_config['use_existing'] == True:
 
-            #for each port, add forward rule
-            for port in mgmt_ports:
-                    #cidr = management_sg_config.get('cidr', None)
-                    protocol = management_network_config.get('protocol', None)
-                    network_creator.add_port_fwd_rule(public_ip, port, port, 
-                                                      protocol,
-                                                      node)
+                mgmt_ports = management_network_config['ports']
+                public_ip = network_creator.get_mgmt_pub_ip()
+
+                #for each port, add forward rule
+                for port in mgmt_ports:
+                        #cidr = management_sg_config.get('cidr', None)
+                        protocol = management_network_config.get('protocol',
+                                                                None)
+                        network_creator.add_port_fwd_rule(public_ip,
+                                                          port,
+                                                          port,
+                                                          protocol,
+                                                          node)
+            # Set Management IP to either private or Public
+            if mgmt_server_config['use_private_ip'] == True:
+                public_ip = node
+                mgmt_ip = node.private_ips[0]
+            else:
+                public_ip = network_creator.get_mgmt_pub_ip()
+                mgmt_ip = public_ip.address
 
         else:
             lgr.debug(
             'cloudstack -> zone_type must be either basic or advanced')
 
-        provider_context = {"ip": str(public_ip)}
+        provider_context = {"ip": str(mgmt_ip)}
+        provider_context['mgmt_node_id'] = str(node.id)
 
-        print('public ip: ' + public_ip.address + ' key name: ' + self.
+        print('management ip: ' + mgmt_ip + ' key name: ' + self.
               _get_private_key_path_from_keypair_config(
             mgmt_server_config['management_keypair']) + 'user name: ' +
               mgmt_server_config.get('user_on_management'))
 
         self.copy_files_to_manager(
-            public_ip.address,
+            mgmt_ip,
             self.provider_config,
             self._get_private_key_path_from_keypair_config(
                 mgmt_server_config['management_keypair']),
             mgmt_server_config.get('user_on_management'))
 
-        return public_ip.address, \
-               public_ip.address, \
+        return mgmt_ip, \
+               mgmt_ip, \
                self._get_private_key_path_from_keypair_config(
                    mgmt_server_config['management_keypair']), \
                mgmt_server_config.get('user_on_management'), \
@@ -286,8 +302,8 @@ class ProviderManager(BaseProviderClass):
         conflicts during teardown
         :rtype: 'None'
         """
-        management_ip = provider_context['ip']
-        lgr.info('tearing-down management vm {0}.'.format(management_ip))
+        management_id = provider_context['mgmt_node_id']
+        lgr.info('tearing-down management vm {0}.'.format(management_id))
 
         # lgr.debug('reading configuration file {0}'.format(config_path))
         # provider_config = _read_config(config_path)
@@ -315,7 +331,7 @@ class ProviderManager(BaseProviderClass):
                                                         security_group_creator,
                                                         keypair_creator,
                                                         compute_creator,
-                                                        management_ip)
+                                                        management_id)
 
             lgr.debug('terminating management vm and all of its resources.')
             resource_terminator.terminate_resources()
@@ -339,7 +355,7 @@ class ProviderManager(BaseProviderClass):
                                                              network_creator,
                                                              keypair_creator,
                                                              compute_creator,
-                                                             management_ip)
+                                                             management_id)
 
             lgr.debug('terminating management vm and all of its resources.')
             resource_terminator.terminate_resources()
@@ -511,22 +527,21 @@ class CloudstackNetworkResourceTerminator(object):
                  network_creator,
                  key_pair_creator,
                  compute_creator,
-                 mgmt_ip):
+                 mgmt_id):
         self.network_creator = network_creator
         self.key_pair_creator = key_pair_creator
         self.compute_creator = compute_creator
-        self.mgmt_ip = mgmt_ip
+        self.mgmt_id = mgmt_id
 
     def terminate_resources(self):
-        lgr.info('terminating management vm {0}'.format(self.mgmt_ip))
-        self.compute_creator.delete_node(self.mgmt_ip)
+        lgr.info('terminating management vm {0}'.format(self.mgmt_id))
+        self.compute_creator.delete_node(self.mgmt_id)
 
         lgr.info('deleting agent and management keypairs')
         self.key_pair_creator.delete_keypairs()
 
-        lgr.info('deleting agent and management networks\
-        not supported currently in libcloud')
-        #self.network_creator.delete_networks()
+        lgr.info('deleting agent and management networks')
+        self.network_creator.delete_networks()
 
 
 class CloudstackLogicError(RuntimeError):
@@ -560,12 +575,23 @@ class CloudstackKeypairCreator(object):
 
     def delete_keypairs(self):
         mgmt_keypair_name = self.get_management_keypair_name()
-        lgr.info('deleting management keypair {0}'.format(mgmt_keypair_name))
-        self.cloud_driver.ex_delete_keypair(mgmt_keypair_name)
+        mgmt_keypair = self._get_keypair(mgmt_keypair_name)
+
+        if not mgmt_keypair == None:
+            lgr.info('deleting management keypair {0}'
+                     .format(mgmt_keypair_name))
+            self.cloud_driver.delete_key_pair(mgmt_keypair)
+        else:
+            lgr.info('keypair {0} not found'.format(mgmt_keypair_name))
 
         agent_keypair_name = self._get_agents_keypair_name()
-        lgr.info('deleting agents keypair {0}'.format(agent_keypair_name))
-        self.cloud_driver.ex_delete_keypair(agent_keypair_name)
+        agent_keypair = self._get_keypair(agent_keypair_name)
+
+        if not agent_keypair == None:
+            lgr.info('deleting agents keypair {0}'.format(agent_keypair_name))
+            self.cloud_driver.delete_key_pair(agent_keypair)
+        else:
+            lgr.info('keypair {0} not found'.format(agent_keypair_name))
 
     def get_management_keypair_name(self):
         keypair_config = self.provider_config['compute']['management_server'][
@@ -694,27 +720,27 @@ class CloudstackSecurityGroupCreator(object):
                     .format(mgmt_security_group_name))
             pass
 
-        agents_security_group_name = self._get_agent_security_group_name()
-        lgr.debug('deleting agents security-group {0}'.format(
-            agents_security_group_name))
-        try:
-            self.cloud_driver.ex_delete_security_group(
-                agents_security_group_name)
-        except:
-            lgr.warn(
-                'agent security-group {0} may not have been deleted'.format(
-                    agents_security_group_name))
-            pass
+        # agents_security_group_name = self._get_agent_security_group_name()
+        # lgr.debug('deleting agents security-group {0}'.format(
+        #     agents_security_group_name))
+        # try:
+        #     self.cloud_driver.ex_delete_security_group(
+        #         agents_security_group_name)
+        # except:
+        #     lgr.warn(
+        #         'agent security-group {0} may not have been deleted'.format(
+        #             agents_security_group_name))
+        #     pass
 
     def get_mgmt_security_group_name(self):
         mgmt_sg_conf = self.provider_config['networking'][
             'management_security_group']
         return mgmt_sg_conf['name']
 
-    def _get_agent_security_group_name(self):
-        agent_sg_conf = self.provider_config['networking'][
-            'agents_security_group']
-        return agent_sg_conf['name']
+    # def _get_agent_security_group_name(self):
+    #    agent_sg_conf = self.provider_config['networking'][
+    #        'agents_security_group']
+    #    return agent_sg_conf['name']
 
     def _is_sg_exists(self, security_group_name):
         exists = self.get_security_group(security_group_name)
@@ -751,6 +777,7 @@ class CloudstackSecurityGroupCreator(object):
             lgr.info('using existing management security group {0}'.format(
                 management_sg_name))
 
+        """
         lgr.debug('reading agent security-group configuration.')
         agent_sg_config = self.provider_config['networking'][
             'agents_security_group']
@@ -774,6 +801,7 @@ class CloudstackSecurityGroupCreator(object):
             lgr.info(
                 'using existing agent security group {0}'.
                 format(agent_sg_name))
+        """
 
 
 class CloudstackNetworkCreator(object):
@@ -800,25 +828,42 @@ class CloudstackNetworkCreator(object):
 
         if networks.__len__() == 0:
             return None
-
+        #TODO: refactor - needs to return network[0] first item
         return networks
 
     def get_networks(self):
         networks = self.cloud_driver.ex_list_networks()
         return networks
 
-    def delete_network(self):
+    def delete_networks(self):
 
         mgmt_network_name = self.get_mgmt_network_name()
+        #agent_network_name = self.get_agent_network_name()
 
-        lgr.warn('management network {0} has not been deleted \
-            as this is not supported in an advanced zone'
-                                  .format(mgmt_network_name))
+        if not self.provider_config['networking'][
+            'management_network']['use_existing'] == True:
 
-        agents_network_name = self._get_agent_network_name()
-        lgr.warn('agent network {0} has not been deleted as this \
-                 is not supported in an advanced zone'
-                 .format(agents_network_name))
+            mgmt_network = self.get_network(mgmt_network_name)
+
+            lgr.info('Deleting Management Network {0}'
+                     .format(mgmt_network_name))
+            self.cloud_driver.ex_delete_network(mgmt_network[0])
+        else:
+            lgr.debug('Using existing networks so no need to delete {0}'
+                     .format(mgmt_network_name))
+
+        """
+        if not self.provider_config['networking'][
+            'agent_network']['use_existing'] == True:
+
+            agent_network = self.get_network(mgmt_network_name)
+        else:
+            lgr.debug('Using existing networks so no need to delete {0}'
+                     .format(agent_network_name))
+
+        lgr.info('Deleting Agent Network {0}'.format(agent_network_name))
+        self.cloud_driver.ex_delete_network(agent_network[0])
+        """
 
     def get_mgmt_network_name(self):
         mgmt_netw_conf = self.provider_config['networking'][
@@ -832,7 +877,7 @@ class CloudstackNetworkCreator(object):
         nets = self.get_networks()
 
         for net in nets:
-            print net.name
+
             if net.name == mgmt_net:
                 lgr.debug('Management Network {0} found!'.format(net.name))
                 break
@@ -873,13 +918,13 @@ class CloudstackNetworkCreator(object):
         lgr.debug('reading management network configuration.')
         management_netw_config = self.provider_config['networking'][
             'management_network']
-        agent_netw_config = self.provider_config['networking'][
-            'agents_network']
+        # agent_netw_config = self.provider_config['networking'][
+        #     'agents_network']
         management_netw_name = management_netw_config['name']
         use_existing = management_netw_config['use_existing']
 
-        agent_netw_name = agent_netw_config['name']
-        agent_use_existing = agent_netw_config['use_existing']
+        # agent_netw_name = agent_netw_config['name']
+        # agent_use_existing = agent_netw_config['use_existing']
 
         if not self._is_netw_exists(management_netw_name):
             if not use_existing == False:
@@ -912,8 +957,7 @@ class CloudstackNetworkCreator(object):
                     else:
                         raise RuntimeError('Specified network offering '
                                            'cannot be found!')
-                print offering
-                print location
+
                 self.cloud_driver.ex_create_network(management_netw_name,
                                                     management_netw_name,
                                                     offering,
@@ -924,7 +968,7 @@ class CloudstackNetworkCreator(object):
         else:
             lgr.info('using existing management network {0}'.format(
                 management_netw_name))
-
+"""
         lgr.debug('reading agent network configuration.')
         agent_netw_config = self.provider_config['networking'][
             'agents_network']
@@ -932,12 +976,12 @@ class CloudstackNetworkCreator(object):
 
         if not self._is_netw_exists(agent_netw_name):
             if not agent_use_existing == False:
-                raise RuntimeError('No existing agent network and use_existing '
-                                   'set to true')
+                raise RuntimeError('No existing agent network and'
+                                   'use_existing set to true')
 
             if not agent_use_existing == True:
-                lgr.info('Creating agent network {0} since use_existing is false '
-                         'and network does not exist'
+                lgr.info('Creating agent network {0} since use_existing'
+                         'is false and network does not exist'
                          .format(agent_netw_name))
 
                 netmask = agent_netw_config['network_mask']
@@ -961,8 +1005,7 @@ class CloudstackNetworkCreator(object):
                     else:
                         raise RuntimeError('Specified network offering '
                                            'cannot be found!')
-                print offering
-                print location
+
                 self.cloud_driver.ex_create_network(agent_netw_name,
                                                     agent_netw_name,
                                                     offering,
@@ -974,6 +1017,7 @@ class CloudstackNetworkCreator(object):
         else:
             lgr.info(
                 'using existing agent network {0}'.format(agent_netw_name))
+"""
 
 
 class CloudstackSecurityGroupComputeCreator(object):
@@ -989,7 +1033,7 @@ class CloudstackSecurityGroupComputeCreator(object):
         self.node_name = node_name
 
     def delete_node(self, node_ip):
-        lgr.debug('getting node for if {0}'.format(node_ip))
+        lgr.debug('getting node for id {0}'.format(node_ip))
         node = [node for node in self.cloud_driver.list_nodes() if
                 node_ip in node.public_ips][0]
 
@@ -1007,6 +1051,7 @@ class CloudstackSecurityGroupComputeCreator(object):
         size_id = server_config.get('size')
 
         lgr.debug('getting node image for ID {0}'.format(image_id))
+
         image = [image for image in self.cloud_driver.list_images() if
                  image_id == image.id][0]
         lgr.debug('getting node size for ID {0}'.format(size_id))
@@ -1039,17 +1084,38 @@ class CloudstackNetworkComputeCreator(object):
                  provider_config,
                  keypair_name=None,
                  network_name=None,
-                 node_name=None):
+                 node_name=None,
+                 zone=None,
+                 ip_address=None):
         self.cloud_driver = cloud_driver
         self.provider_config = provider_config
         self.keypair_name = keypair_name
         self.network_names = network_name
         self.node_name = node_name
+        self.zone = zone
+        self.ip_address = ip_address
 
-    def delete_node(self, node_ip):
-        lgr.debug('getting node for if {0}'.format(node_ip))
+    def get_zone_from_network(self, network_name):
+        lgr.debug('getting zone info of network: {0}'.format(network_name))
+
+        network_creator = CloudstackNetworkCreator(self.cloud_driver,
+                                                   self.provider_config)
+        network = network_creator.get_network(network_name)[0]
+        lgr.debug('We found network: {0}'.format(network))
+        zone_id = network.zoneid
+
+        zone = [zone for zone in self.cloud_driver.list_locations() if
+                zone_id == zone.id][0]
+
+        lgr.debug('Found zone {0}'.format(zone))
+
+        return zone
+
+    def delete_node(self, node_id):
+        lgr.debug('getting node for ID {0}'.format(node_id))
+
         node = [node for node in self.cloud_driver.list_nodes() if
-                node_ip in node.public_ips][0]
+                node_id == node.id][0]
 
         lgr.debug('destroying node {0}'.format(node))
         self.cloud_driver.destroy_node(node)
@@ -1079,15 +1145,26 @@ class CloudstackNetworkComputeCreator(object):
             network_config = self.provider_config.get('networking', {}) \
                 .get('management_network', {})
             self.network_names = [network_config['name'], ]
+        if self.zone is None:
+            mgmt_network_name = \
+            self.provider_config.get('networking', {}) \
+                                     .get('management_network', {}) \
+                                     .get('name', None)
+            self.zone = self.get_zone_from_network(mgmt_network_name)
+        if self.ip_address is None:
+            self.ip_address = server_config['private_ip']
 
         lgr.info(
             'starting a new virtual instance named {0} on network {1}'
-            .format(self.node_name, self.network_names))
+            ' in zone {2}'
+            .format(self.node_name, self.network_names[0].name, self.zone))
         node = self.cloud_driver.create_node(
             name=self.node_name,
             ex_keyname=self.keypair_name,
             networks=self.network_names,
             image=image,
-            size=size)
+            size=size,
+            location=self.zone,
+            ex_ip_address=self.ip_address)
 
         return node
