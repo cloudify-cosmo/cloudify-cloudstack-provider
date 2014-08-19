@@ -11,12 +11,9 @@ authentication:
 #     management_server:
 #		  use_existing: false
 #		  use_private_ip: false
-#         private_ip: 10.99.17.34
 #         user_on_management: root
 #         userhome_on_management: /root
 #         instance:
-#             use_existing: false
-#			  use_private_ip: true
 #             private_ip: 
 #             name: cloudify-management-server
 #             image: f181fccb-62ea-4296-a0a0-e773a1391dc8

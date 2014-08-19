@@ -11,12 +11,10 @@ compute:
     management_server:
         use_existing: false
         use_private_ip: false
-        private_ip: 
         user_on_management: root
         userhome_on_management: /root
         instance:
-            use_existing: false
-            use_private_ip: false
+            private_ip: 
             name: cloudify-management-server
             image: f181fccb-62ea-4296-a0a0-e773a1391dc8
             size: Medium
