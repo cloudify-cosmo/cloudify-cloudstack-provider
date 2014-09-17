@@ -17,25 +17,25 @@ __author__ = 'adaml'
 
 from setuptools import setup
 
-VERSION = '1.0'
+VERSION = '1.2'
 
 setup(
-    name='cloudify-exoscale',
+    name='cloudify-cloudstack-provider',
     version=VERSION,
     author='adaml',
     author_email='adaml@gigaspaces.com',
-    packages=['cloudify_exoscale'],
+    packages=['cloudify_exoscale', 'cloudify_cloudstack'],
     license='LICENSE',
-    description='the cloudify exoscale provider',
+    description='the cloudify cloudstack provider',
     package_data={'cloudify_exoscale': ['cloudify-config.yaml',
+                                        'cloudify-config.defaults.yaml'],
+                  'cloudify_cloudstack':['cloudify-config.yaml',
                                         'cloudify-config.defaults.yaml']},
     install_requires=[
         "scp",
-        "fabric",
         "jsonschema",
-        "IPy",
-        "PyYAML",
-        "apache-libcloud>=0.15.0",
-        'cloudify-cli==3.0',
+        "IPy==0.81",
+        "apache-libcloud>=0.15.1",
+        'cloudify==3.0'
     ],
 )

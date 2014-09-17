@@ -21,7 +21,7 @@ compute:
                 private_key_target_path: ~/.ssh/cloudify-management-kp.pem
     agent_servers:
         agents_keypair:
-            use_existing: true
+            use_existing: false
             name: cloudify-agents-kp
 #            provided:
 #                public_key_filepath:
